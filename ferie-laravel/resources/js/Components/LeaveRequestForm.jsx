@@ -33,6 +33,7 @@ export default function LeaveRequestForm({
     onSuccess,
     initialStartDate = '',
     initialEndDate = '',
+    compact = false,
 }) {
     const { auth, adminEmployees = [], adminEmployeesWithBalances = {} } = usePage().props;
     const employeesFromProps = Array.isArray(employees) ? employees : Object.values(employees || {});
@@ -101,7 +102,7 @@ export default function LeaveRequestForm({
     };
 
     return (
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className={compact ? 'space-y-2' : 'space-y-4'}>
             {showEmployeeSelect && (
                 <div>
                     <InputLabel htmlFor="userId" value="Dipendente" />
@@ -169,7 +170,7 @@ export default function LeaveRequestForm({
                     </p>
                 )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className={`grid sm:grid-cols-2 ${compact ? 'gap-2' : 'gap-4'}`}>
                 <div>
                     <InputLabel htmlFor="startDate" value="Data inizio" />
                     <TextInput
@@ -202,13 +203,13 @@ export default function LeaveRequestForm({
                     id="note"
                     value={data.note}
                     onChange={(e) => setData('note', e.target.value)}
-                    rows={3}
+                    rows={compact ? 2 : 3}
                     placeholder="Es. visita medica"
                 />
                 <InputError message={errors.note} className="mt-2" />
             </div>
 
-            <div className="flex gap-3 pt-2">
+            <div className={`flex gap-3 ${compact ? 'pt-1' : 'pt-2'}`}>
                 <PrimaryButton disabled={processing}>
                     {processing ? 'Invio...' : 'Invia richiesta'}
                 </PrimaryButton>

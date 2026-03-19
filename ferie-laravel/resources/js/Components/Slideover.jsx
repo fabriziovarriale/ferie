@@ -10,6 +10,7 @@ const sizeClasses = {
     lg: 'max-w-lg',
     xl: 'max-w-xl',
     '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
 };
 
 export default function Slideover({
@@ -18,6 +19,7 @@ export default function Slideover({
     onClose = () => {},
     title = '',
     size = 'md',
+    compact = false,
 }) {
     return (
         <Transition show={show}>
@@ -47,7 +49,7 @@ export default function Slideover({
                                 <DialogPanel className={`pointer-events-auto w-screen ${sizeClasses[size] || sizeClasses.md}`}>
                                     <div className="flex h-full flex-col bg-card shadow-xl">
                                         {title && (
-                                            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+                                            <div className={`flex items-center justify-between border-b border-border ${compact ? 'px-3 py-2' : 'px-6 py-4'}`}>
                                                 <h2 className="text-lg font-semibold text-foreground">
                                                     {title}
                                                 </h2>
@@ -63,7 +65,7 @@ export default function Slideover({
                                                 </button>
                                             </div>
                                         )}
-                                        <div className="flex-1 overflow-y-auto px-6 py-4">
+                                        <div className={`flex-1 overflow-y-auto ${compact ? 'px-3 py-2' : 'px-6 py-4'}`}>
                                             {children}
                                         </div>
                                     </div>

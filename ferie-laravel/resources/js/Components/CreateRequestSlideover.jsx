@@ -47,15 +47,16 @@ export default function CreateRequestSlideover({
             show={show}
             onClose={handleClose}
             title="Nuova richiesta ferie"
-            size="lg"
+            size="3xl"
+            compact
         >
-            <div className="space-y-6">
+            <div className="space-y-3">
                 <section>
-                    <h3 className="mb-2 text-sm font-medium text-foreground">Seleziona il periodo</h3>
-                    <p className="mb-4 text-sm text-muted-foreground">
+                    <h3 className="mb-0.5 text-sm font-medium text-foreground">Seleziona il periodo</h3>
+                    <p className="mb-1.5 text-sm text-muted-foreground">
                         Scegli un intervallo di date sul calendario. I periodi con richieste sono evidenziati.
                     </p>
-                    <div className="rdp-root flex justify-center overflow-x-auto pb-2">
+                    <div className="rdp-root flex justify-center overflow-x-auto">
                         <DayPicker
                             mode="range"
                             locale={it}
@@ -70,7 +71,7 @@ export default function CreateRequestSlideover({
                         />
                     </div>
                     {dateRange?.from && (
-                        <div className="mt-3 rounded-md border border-border bg-muted/30 px-4 py-2 text-sm text-foreground">
+                        <div className="mt-1.5 rounded border border-border bg-muted/30 px-2 py-1 text-sm text-foreground">
                             Selezionato: {format(dateRange.from, 'd MMM yyyy', { locale: it })}
                             {dateRange.to && dateRange.from.getTime() !== dateRange.to.getTime() && (
                                 <> — {format(dateRange.to, 'd MMM yyyy', { locale: it })}</>
@@ -79,8 +80,8 @@ export default function CreateRequestSlideover({
                     )}
                 </section>
 
-                <section className="border-t border-border pt-6">
-                    <h3 className="mb-4 text-sm font-medium text-foreground">Dettagli richiesta</h3>
+                <section className="border-t border-border pt-4">
+                    <h3 className="mb-2 text-sm font-medium text-foreground">Dettagli richiesta</h3>
                     <LeaveRequestForm
                         leaveTypes={leaveTypes}
                         employeeBalance={employeeBalance}
@@ -91,6 +92,7 @@ export default function CreateRequestSlideover({
                         initialEndDate={selectedRange?.to ?? ''}
                         errors={errors}
                         onSuccess={handleClose}
+                        compact
                     />
                 </section>
             </div>
