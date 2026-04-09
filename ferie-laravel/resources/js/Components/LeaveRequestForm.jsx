@@ -1,3 +1,4 @@
+import DatePickerField, { parseYmdToLocalDate } from '@/Components/DatePickerField';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -6,7 +7,7 @@ import Select from '@/Components/Select';
 import TextInput from '@/Components/TextInput';
 import Textarea from '@/Components/Textarea';
 import { useForm, usePage } from '@inertiajs/react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 function workingDaysBetween(startDate, endDate) {
     if (!startDate || !endDate) return 0;
@@ -33,7 +34,6 @@ export default function LeaveRequestForm({
     onSuccess,
     initialStartDate = '',
     initialEndDate = '',
-    compact = false,
 }) {
     const { auth, adminEmployees = [], adminEmployeesWithBalances = {} } = usePage().props;
     const employeesFromProps = Array.isArray(employees) ? employees : Object.values(employees || {});
@@ -43,29 +43,46 @@ export default function LeaveRequestForm({
     const isAdminUser = auth?.user?.role === 'admin';
     const showEmployeeSelect = hasEmployees || isAdmin || isAdminUser;
 
-    const { data, setData, post, processing, errors: formErrors } = useForm(
-        {
-            userId: showEmployeeSelect && hasEmployees ? String(employeesList[0].id) : '',
-            leaveType: 'FERIE',
-            startDate: initialStartDate,
-            endDate: initialEndDate,
-            requestedUnits: '0',
-            note: '',
-        },
-        {
-            preserveScroll: true,
-            onSuccess: () => onSuccess?.(),
-        }
-    );
+    const firstEmployeeId =
+        showEmployeeSelect && hasEmployees && employeesList[0]?.id != null
+            ? String(employeesList[0].id)
+            : '';
+
+    const { data, setData, post, reset, processing, errors: formErrors, transform } = useForm({
+        userId: firstEmployeeId,
+        leaveType: 'FERIE',
+        startDate: initialStartDate ?? '',
+        endDate: initialEndDate ?? '',
+        requestedUnits: '0',
+        note: '',
+    });
 
     const errors = Object.keys(formErrors).length > 0 ? formErrors : externalErrors;
 
+    const leaveTypesRef = useRef(leaveTypes);
+    leaveTypesRef.current = leaveTypes;
+    const flagsRef = useRef({ hasEmployees, isAdmin, isAdminUser });
+    flagsRef.current = { hasEmployees, isAdmin, isAdminUser };
+
     useEffect(() => {
-        if (initialStartDate || initialEndDate) {
-            if (initialStartDate) setData('startDate', initialStartDate);
-            if (initialEndDate) setData('endDate', initialEndDate);
-        }
-    }, [initialStartDate, initialEndDate]);
+        transform((raw) => {
+            const out = { ...raw };
+            const lt = leaveTypesRef.current.find((l) => l.code === out.leaveType);
+            if (!lt || lt.unit !== 'hours') {
+                out.requestedUnits = '0';
+            }
+            const { hasEmployees: he, isAdmin: ia, isAdminUser: iu } = flagsRef.current;
+            if (!(he || ia || iu)) {
+                delete out.userId;
+            }
+            return out;
+        });
+    }, [transform]);
+
+    useEffect(() => {
+        if (initialStartDate) setData('startDate', initialStartDate);
+        if (initialEndDate) setData('endDate', initialEndDate);
+    }, [initialStartDate, initialEndDate, setData]);
 
     const selectedType = useMemo(
         () => leaveTypes.find((lt) => lt.code === data.leaveType),
@@ -88,21 +105,14 @@ export default function LeaveRequestForm({
 
     const submit = (e) => {
         e.preventDefault();
-        const payload = { ...data };
-        if (selectedType?.unit !== 'hours') {
-            payload.requestedUnits = '0';
-        }
-        if (!showEmployeeSelect) {
-            delete payload.userId;
-        }
         post(route('leave-request.store'), {
-            data: payload,
-            onSuccess: () => onSuccess?.(),
+            preserveScroll: true,
+            onSuccess: () => { reset(); onSuccess?.(); },
         });
     };
 
     return (
-        <form onSubmit={submit} className={compact ? 'space-y-2' : 'space-y-4'}>
+        <form onSubmit={submit} className="space-y-4">
             {showEmployeeSelect && (
                 <div>
                     <InputLabel htmlFor="userId" value="Dipendente" />
@@ -150,7 +160,7 @@ export default function LeaveRequestForm({
                         id="requestedUnits"
                         type="number"
                         min={1}
-                        value={data.requestedUnits}
+                        value={data.requestedUnits ?? ''}
                         onChange={(e) => setData('requestedUnits', e.target.value)}
                         className="mt-1 block w-full"
                     />
@@ -170,27 +180,25 @@ export default function LeaveRequestForm({
                     </p>
                 )}
 
-            <div className={`grid sm:grid-cols-2 ${compact ? 'gap-2' : 'gap-4'}`}>
+            <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                     <InputLabel htmlFor="startDate" value="Data inizio" />
-                    <TextInput
+                    <DatePickerField
                         id="startDate"
-                        type="date"
-                        value={data.startDate}
-                        onChange={(e) => setData('startDate', e.target.value)}
-                        className="mt-1 block w-full"
+                        value={data.startDate ?? ''}
+                        onChange={(v) => setData('startDate', v)}
+                        minDate={new Date(2020, 0, 1)}
                         required
                     />
                     <InputError message={errors.startDate} className="mt-2" />
                 </div>
                 <div>
                     <InputLabel htmlFor="endDate" value="Data fine" />
-                    <TextInput
+                    <DatePickerField
                         id="endDate"
-                        type="date"
-                        value={data.endDate}
-                        onChange={(e) => setData('endDate', e.target.value)}
-                        className="mt-1 block w-full"
+                        value={data.endDate ?? ''}
+                        onChange={(v) => setData('endDate', v)}
+                        minDate={parseYmdToLocalDate(data.startDate) ?? new Date(2020, 0, 1)}
                         required
                     />
                     <InputError message={errors.endDate} className="mt-2" />
@@ -201,15 +209,15 @@ export default function LeaveRequestForm({
                 <InputLabel htmlFor="note" value="Note opzionali" />
                 <Textarea
                     id="note"
-                    value={data.note}
+                    value={data.note ?? ''}
                     onChange={(e) => setData('note', e.target.value)}
-                    rows={compact ? 2 : 3}
+                    rows={3}
                     placeholder="Es. visita medica"
                 />
                 <InputError message={errors.note} className="mt-2" />
             </div>
 
-            <div className={`flex gap-3 ${compact ? 'pt-1' : 'pt-2'}`}>
+            <div className="flex gap-3 pt-2">
                 <PrimaryButton disabled={processing}>
                     {processing ? 'Invio...' : 'Invia richiesta'}
                 </PrimaryButton>

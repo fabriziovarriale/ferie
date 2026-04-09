@@ -4,7 +4,9 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "cross-env LARAVEL_BYPASS_ENV_CHECK=1 vite",
+        "dev:watch": "vite build --watch",
+        "start": "concurrently -n laravel,vite -c blue,green \"php artisan serve\" \"npm run dev\""
     },
     "devDependencies": {
         "@headlessui/react": "^2.0.0",
@@ -15,6 +17,7 @@
         "autoprefixer": "^10.4.12",
         "axios": "^1.11.0",
         "concurrently": "^9.0.1",
+        "cross-env": "^7.0.3",
         "laravel-vite-plugin": "^2.0.0",
         "postcss": "^8.4.31",
         "react": "^18.2.0",

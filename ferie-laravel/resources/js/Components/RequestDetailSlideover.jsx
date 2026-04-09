@@ -1,3 +1,4 @@
+import ConfirmDialog from '@/Components/ConfirmDialog';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import Slideover from '@/Components/Slideover';
@@ -15,10 +16,13 @@ const STATUS_LABELS = {
 export default function RequestDetailSlideover({ request: req, show, onClose }) {
     const [rejectNote, setRejectNote] = useState('');
     const [processing, setProcessing] = useState(false);
+    const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
     if (!req) return null;
 
     const canApprove = req.status === 'PENDING';
+    const canRevoke = req.status === 'APPROVED';
 
     const handleApprove = () => {
         setProcessing(true);
@@ -40,9 +44,32 @@ export default function RequestDetailSlideover({ request: req, show, onClose }) 
         });
     };
 
+    const handleRevoke = () => {
+        setProcessing(true);
+        router.patch(route('admin.requests.revoke', req.id), {}, {
+            preserveScroll: true,
+            onFinish: () => setProcessing(false),
+            onSuccess: () => { setRevokeConfirmOpen(false); onClose(); },
+        });
+    };
+
+    const handleDelete = () => {
+        setProcessing(true);
+        router.delete(route('admin.requests.destroy', req.id), {
+            preserveScroll: true,
+            onFinish: () => setProcessing(false),
+            onSuccess: () => { setDeleteConfirmOpen(false); onClose(); },
+        });
+    };
+
     return (
         <Slideover show={show} onClose={onClose} title="Dettaglio richiesta">
             <div className="space-y-4">
+                {req.roleConflictWarning && (
+                    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+                        <span className="font-semibold">Attenzione: </span>{req.roleConflictWarning}
+                    </div>
+                )}
                 <dl className="space-y-3">
                     <div>
                         <dt className="text-sm text-muted-foreground">Dipendente</dt>
@@ -119,7 +146,56 @@ export default function RequestDetailSlideover({ request: req, show, onClose }) 
                         </div>
                     </>
                 )}
+
+                {canRevoke && (
+                    <div className="border-t border-border pt-4">
+                        <p className="mb-3 text-xs text-muted-foreground">
+                            La revoca riporta la richiesta in stato "In attesa" per una nuova valutazione.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => setRevokeConfirmOpen(true)}
+                            disabled={processing}
+                            className="inline-flex items-center rounded-md border border-amber-500 px-3 py-1.5 text-sm font-medium text-amber-600 hover:bg-amber-500/10 disabled:opacity-50 dark:text-amber-400"
+                        >
+                            Revoca approvazione
+                        </button>
+                    </div>
+                )}
+
+                <div className="border-t border-border pt-4">
+                    <button
+                        type="button"
+                        onClick={() => setDeleteConfirmOpen(true)}
+                        disabled={processing}
+                        className="inline-flex items-center rounded-md border border-destructive px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                    >
+                        Elimina richiesta
+                    </button>
+                </div>
             </div>
+
+            <ConfirmDialog
+                show={revokeConfirmOpen}
+                title="Revoca approvazione"
+                message="La richiesta tornerà in stato «In attesa» e il saldo verrà aggiornato automaticamente. Continuare?"
+                confirmLabel="Revoca"
+                cancelLabel="Annulla"
+                processing={processing}
+                onConfirm={handleRevoke}
+                onCancel={() => setRevokeConfirmOpen(false)}
+            />
+            <ConfirmDialog
+                show={deleteConfirmOpen}
+                title="Elimina richiesta"
+                message="La richiesta verrà eliminata definitivamente. Questa operazione non può essere annullata."
+                confirmLabel="Elimina"
+                cancelLabel="Annulla"
+                destructive
+                processing={processing}
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteConfirmOpen(false)}
+            />
         </Slideover>
     );
 }

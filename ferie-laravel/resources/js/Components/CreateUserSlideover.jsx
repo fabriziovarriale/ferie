@@ -7,9 +7,11 @@ import Slideover from '@/Components/Slideover';
 import TextInput from '@/Components/TextInput';
 import { useForm } from '@inertiajs/react';
 
-const ROLE_OPTIONS = [
-    { id: 'user', name: 'Dipendente' },
-    { id: 'admin', name: 'Admin' },
+const JOB_ROLE_OPTIONS = [
+    { id: 'Designer', name: 'Designer' },
+    { id: 'PM', name: 'PM' },
+    { id: 'Developer', name: 'Developer' },
+    { id: 'Socio', name: 'Socio' },
 ];
 
 export default function CreateUserSlideover({ show, onClose }) {
@@ -19,7 +21,7 @@ export default function CreateUserSlideover({ show, onClose }) {
         email: '',
         password: '',
         password_confirmation: '',
-        role: 'user',
+        jobRole: '',
     });
 
     const submit = (e) => {
@@ -97,16 +99,16 @@ export default function CreateUserSlideover({ show, onClose }) {
                 </div>
 
                 <div>
-                    <InputLabel htmlFor="role" value="Ruolo" />
+                    <InputLabel htmlFor="jobRole" value="Ruolo" />
                     <Select
-                        id="role"
-                        value={data.role}
-                        onChange={(v) => setData('role', v)}
-                        options={ROLE_OPTIONS}
+                        id="jobRole"
+                        value={data.jobRole}
+                        onChange={(v) => setData('jobRole', v)}
+                        options={JOB_ROLE_OPTIONS}
                         optionValue="id"
                         optionLabel="name"
                     />
-                    <InputError message={errors.role} className="mt-2" />
+                    <InputError message={errors.jobRole} className="mt-2" />
                 </div>
 
                 <div className="flex gap-3 pt-2">

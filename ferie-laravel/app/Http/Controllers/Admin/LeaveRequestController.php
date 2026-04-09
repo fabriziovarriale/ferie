@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
+use App\Notifications\LeaveRequestStatusChanged;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -18,19 +18,37 @@ class LeaveRequestController extends Controller
             return back()->with('status', 'Richiesta già elaborata.');
         }
 
-        $leaveRequest->update(['status' => 'APPROVED']);
+        $leaveRequest->update([
+            'status' => 'APPROVED',
+            'approved_days' => (string) $leaveRequest->requested_units,
+        ]);
 
-        $leaveType = $leaveRequest->leaveType;
-        if ($leaveType && $leaveType->deducts_balance && $leaveType->unit === 'days') {
-            $year = $leaveRequest->start_date->year;
-            $balance = LeaveBalance::firstOrCreate(
-                ['user_id' => $leaveRequest->user_id, 'year' => $year],
-                ['allocated_days' => 0, 'used_days' => 0]
-            );
-            $balance->increment('used_days', $leaveRequest->requested_units);
+        if ($leaveRequest->user) {
+            $leaveRequest->user->notify(new LeaveRequestStatusChanged($leaveRequest));
         }
 
         return back()->with('status', 'Richiesta approvata.');
+    }
+
+    public function revoke(LeaveRequest $leaveRequest): RedirectResponse
+    {
+        if ($leaveRequest->status !== 'APPROVED') {
+            return back()->with('status', 'Solo le richieste approvate possono essere revocate.');
+        }
+
+        $leaveRequest->update([
+            'status' => 'PENDING',
+            'approved_days' => null,
+        ]);
+
+        return back()->with('status', 'Approvazione revocata. La richiesta è tornata in attesa.');
+    }
+
+    public function destroy(LeaveRequest $leaveRequest): RedirectResponse
+    {
+        $leaveRequest->delete();
+
+        return back()->with('status', 'Richiesta eliminata.');
     }
 
     public function reject(Request $request, LeaveRequest $leaveRequest): RedirectResponse
@@ -47,6 +65,10 @@ class LeaveRequestController extends Controller
             'status' => 'REJECTED',
             'note_admin' => $validated['note_admin'] ?? null,
         ]);
+
+        if ($leaveRequest->user) {
+            $leaveRequest->user->notify(new LeaveRequestStatusChanged($leaveRequest->fresh()));
+        }
 
         return back()->with('status', 'Richiesta rifiutata.');
     }

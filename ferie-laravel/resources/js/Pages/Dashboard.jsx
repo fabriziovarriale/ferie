@@ -1,7 +1,9 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import ApprovedLeaveImpactCalendar from '@/Components/ApprovedLeaveImpactCalendar';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 import CreateRequestSlideover from '@/Components/CreateRequestSlideover';
 import RequestDetailSlideover from '@/Components/RequestDetailSlideover';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 
 export default function Dashboard({
@@ -11,20 +13,26 @@ export default function Dashboard({
     employeeRequests,
     employees = [],
     employeesWithBalances = {},
-    calendarRequests = [],
+    approvedLeaveCalendar = [],
+    companyHolidays = [],
     isAdmin = false,
     pendingRequests = [],
     approvedRequests = [],
+    approvedMeta = null,
     rejectedRequests = [],
+    rejectedMeta = null,
 }) {
     const { errors = {} } = usePage().props;
     const userFullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Utente';
     const [createSlideoverOpen, setCreateSlideoverOpen] = useState(false);
 
+    const { flash = {} } = usePage().props;
+
     const hasLeaveErrors = ['leaveType', 'startDate', 'endDate', 'requestedUnits', 'note', 'userId'].some((k) => errors?.[k]);
     useEffect(() => {
         if (hasLeaveErrors) setCreateSlideoverOpen(true);
     }, [hasLeaveErrors]);
+
 
     return (
         <AuthenticatedLayout
@@ -54,12 +62,19 @@ export default function Dashboard({
             <Head title="Dashboard - Ferie" />
 
             <div className="py-6">
-                <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+                <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6 lg:px-8">
+                    {flash.status && (
+                        <div className="rounded-md bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
+                            {flash.status}
+                        </div>
+                    )}
                     {isAdmin ? (
                         <AdminView
                             pendingRequests={pendingRequests}
                             approvedRequests={approvedRequests}
+                            approvedMeta={approvedMeta}
                             rejectedRequests={rejectedRequests}
+                            rejectedMeta={rejectedMeta}
                         />
                     ) : (
                         <EmployeeView
@@ -67,6 +82,7 @@ export default function Dashboard({
                             requests={employeeRequests}
                         />
                     )}
+                    <ApprovedLeaveImpactCalendar approvedEntries={approvedLeaveCalendar} holidays={companyHolidays} />
                 </div>
             </div>
 
@@ -78,16 +94,73 @@ export default function Dashboard({
                 employees={employees}
                 employeesWithBalances={employeesWithBalances}
                 isAdmin={isAdmin}
-                requests={calendarRequests}
                 errors={errors}
             />
         </AuthenticatedLayout>
     );
 }
 
+function BalanceBar({ balance }) {
+    if (!balance || !balance.total) return null;
+    const usedPct = Math.min(100, Math.round((balance.used / balance.total) * 100));
+    const remainingPct = 100 - usedPct;
+    return (
+        <div className="rounded-lg border border-border bg-card p-4 shadow">
+            <div className="mb-2 flex justify-between text-sm">
+                <span className="font-medium text-foreground">Saldo ferie {new Date().getFullYear()}</span>
+                <span className="text-muted-foreground">{balance.remaining} / {balance.total} residui</span>
+            </div>
+            <div className="flex h-4 w-full overflow-hidden rounded-full bg-muted">
+                {usedPct > 0 && (
+                    <div
+                        className="h-full bg-amber-500 transition-all"
+                        style={{ width: `${usedPct}%` }}
+                        title={`Usati: ${balance.used}`}
+                    />
+                )}
+                {remainingPct > 0 && (
+                    <div
+                        className="h-full bg-emerald-500 transition-all"
+                        style={{ width: `${remainingPct}%` }}
+                        title={`Residui: ${balance.remaining}`}
+                    />
+                )}
+            </div>
+            <div className="mt-1 flex gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                    <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+                    Usati: {balance.used}
+                </span>
+                <span className="flex items-center gap-1">
+                    <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                    Residui: {balance.remaining}
+                </span>
+                <span className="flex items-center gap-1">
+                    Totale: {balance.total}
+                </span>
+            </div>
+        </div>
+    );
+}
+
 function EmployeeView({ balance, requests }) {
+    const [pendingCancelId, setPendingCancelId] = useState(null);
+    const [cancelProcessing, setCancelProcessing] = useState(false);
+
+    const handleCancel = () => {
+        if (!pendingCancelId) return;
+        setCancelProcessing(true);
+        router.patch(route('leave-request.cancel', pendingCancelId), {}, {
+            preserveScroll: true,
+            onSuccess: () => { setCancelProcessing(false); setPendingCancelId(null); },
+            onError: () => setCancelProcessing(false),
+        });
+    };
+
     return (
         <div className="space-y-6">
+            <BalanceBar balance={balance} />
+
             <section className="grid gap-4 md:grid-cols-3">
                 <div className="rounded-lg border-l-4 border-l-primary bg-primary/10 p-4">
                     <p className="text-sm text-muted-foreground">Giorni totali</p>
@@ -106,44 +179,101 @@ function EmployeeView({ balance, requests }) {
             <div className="rounded-lg bg-card border border-border p-6 shadow">
                 <h3 className="text-lg font-medium text-foreground">Storico richieste</h3>
                 <p className="mb-4 text-sm text-muted-foreground">Elenco richieste con stato</p>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border">
-                        <thead>
-                            <tr>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Tipo</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Inizio</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Fine</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Stato</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {requests.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                                        Nessuna richiesta
-                                    </td>
-                                </tr>
-                            ) : (
-                                requests.map((r) => (
-                                    <tr key={r.id}>
-                                        <td className="px-4 py-2 text-foreground">{r.leaveType}</td>
-                                        <td className="px-4 py-2 text-foreground">{r.startDate}</td>
-                                        <td className="px-4 py-2 text-foreground">{r.endDate}</td>
-                                        <td className="px-4 py-2">
-                                            <StatusBadge status={r.status} />
-                                        </td>
+
+                {requests.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">Nessuna richiesta</p>
+                ) : (
+                    <>
+                        {/* Card layout — mobile */}
+                        <ul className="space-y-3 sm:hidden">
+                            {requests.map((r) => (
+                                <li key={r.id} className="rounded-lg border border-border p-4">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                            <p className="font-medium text-foreground">{r.leaveType}</p>
+                                            <p className="mt-0.5 text-sm text-muted-foreground">
+                                                {r.startDate} — {r.endDate}
+                                            </p>
+                                        </div>
+                                        <StatusBadge status={r.status} />
+                                    </div>
+                                    {r.noteAdmin && (
+                                        <p className="mt-2 text-xs italic text-muted-foreground">
+                                            Nota: {r.noteAdmin}
+                                        </p>
+                                    )}
+                                    {r.status === 'PENDING' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setPendingCancelId(r.id)}
+                                            className="mt-3 text-xs text-destructive hover:underline"
+                                        >
+                                            Annulla richiesta
+                                        </button>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+
+                        {/* Table layout — desktop */}
+                        <div className="hidden overflow-x-auto sm:block">
+                            <table className="min-w-full divide-y divide-border">
+                                <thead>
+                                    <tr>
+                                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Tipo</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Inizio</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Fine</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Stato</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Note admin</th>
+                                        <th className="px-4 py-2"></th>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {requests.map((r) => (
+                                        <tr key={r.id}>
+                                            <td className="px-4 py-2 text-foreground">{r.leaveType}</td>
+                                            <td className="px-4 py-2 text-foreground">{r.startDate}</td>
+                                            <td className="px-4 py-2 text-foreground">{r.endDate}</td>
+                                            <td className="px-4 py-2"><StatusBadge status={r.status} /></td>
+                                            <td className="px-4 py-2 text-sm text-muted-foreground">
+                                                {r.noteAdmin ? <span className="italic">{r.noteAdmin}</span> : '—'}
+                                            </td>
+                                            <td className="px-4 py-2">
+                                                {r.status === 'PENDING' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPendingCancelId(r.id)}
+                                                        className="text-xs text-destructive hover:underline"
+                                                    >
+                                                        Annulla
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
+                )}
             </div>
+
+            <ConfirmDialog
+                show={pendingCancelId !== null}
+                title="Annulla richiesta"
+                message="Annullare questa richiesta? L'operazione non può essere disfatta."
+                confirmLabel="Sì, annulla"
+                cancelLabel="Indietro"
+                destructive
+                processing={cancelProcessing}
+                onConfirm={handleCancel}
+                onCancel={() => setPendingCancelId(null)}
+            />
         </div>
     );
 }
 
-function AdminView({ pendingRequests, approvedRequests, rejectedRequests }) {
+function AdminView({ pendingRequests, approvedRequests, approvedMeta, rejectedRequests, rejectedMeta }) {
     const { flash = {} } = usePage().props;
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [detailSlideoverOpen, setDetailSlideoverOpen] = useState(false);
@@ -192,49 +322,116 @@ function AdminView({ pendingRequests, approvedRequests, rejectedRequests }) {
                     <h3 className="text-lg font-medium text-foreground">Richieste</h3>
                     <p className="text-sm text-muted-foreground">Elenco di tutte le richieste con stato</p>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border">
-                        <thead>
-                            <tr>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Dipendente</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Tipo</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Periodo</th>
-                                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Stato</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {allRequests.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                                        Nessuna richiesta
-                                    </td>
-                                </tr>
-                            ) : (
-                                allRequests.map((r) => (
-                                    <tr
-                                        key={r.id}
-                                        onClick={() => openDetail(r)}
-                                        className="cursor-pointer transition-colors hover:bg-accent/50"
-                                    >
-                                        <td className="px-4 py-2 text-foreground">{r.userFullName}</td>
-                                        <td className="px-4 py-2 text-foreground">{r.leaveType}</td>
-                                        <td className="px-4 py-2 text-foreground">{r.startDate} - {r.endDate}</td>
-                                        <td className="px-4 py-2">
-                                            <StatusBadge status={r.status} />
-                                        </td>
+
+                {allRequests.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">Nessuna richiesta</p>
+                ) : (
+                    <>
+                        {/* Card layout — mobile */}
+                        <ul className="space-y-3 sm:hidden">
+                            {allRequests.map((r) => (
+                                <li
+                                    key={r.id}
+                                    onClick={() => openDetail(r)}
+                                    className="cursor-pointer rounded-lg border border-border p-4 hover:bg-accent/50"
+                                >
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div>
+                                            <p className="font-medium text-foreground">{r.userFullName}</p>
+                                            <p className="mt-0.5 text-sm text-muted-foreground">
+                                                {r.leaveType} · {r.startDate} — {r.endDate}
+                                            </p>
+                                        </div>
+                                        <StatusBadge status={r.status} />
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+
+                        {/* Table layout — desktop */}
+                        <div className="hidden overflow-x-auto sm:block">
+                            <table className="min-w-full divide-y divide-border">
+                                <thead>
+                                    <tr>
+                                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Dipendente</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Tipo</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Periodo</th>
+                                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Stato</th>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {allRequests.map((r) => (
+                                        <tr
+                                            key={r.id}
+                                            onClick={() => openDetail(r)}
+                                            className="cursor-pointer transition-colors hover:bg-accent/50"
+                                        >
+                                            <td className="px-4 py-2 text-foreground">{r.userFullName}</td>
+                                            <td className="px-4 py-2 text-foreground">{r.leaveType}</td>
+                                            <td className="px-4 py-2 text-foreground">{r.startDate} - {r.endDate}</td>
+                                            <td className="px-4 py-2"><StatusBadge status={r.status} /></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
+                )}
             </div>
+
+            {(approvedMeta || rejectedMeta) && (
+                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                    {approvedMeta && approvedMeta.lastPage > 1 && (
+                        <PaginationBar
+                            label="Approvate"
+                            meta={approvedMeta}
+                            pageParam="approved_page"
+                        />
+                    )}
+                    {rejectedMeta && rejectedMeta.lastPage > 1 && (
+                        <PaginationBar
+                            label="Rifiutate"
+                            meta={rejectedMeta}
+                            pageParam="rejected_page"
+                        />
+                    )}
+                </div>
+            )}
 
             <RequestDetailSlideover
                 request={selectedRequest}
                 show={detailSlideoverOpen}
                 onClose={closeDetail}
             />
+        </div>
+    );
+}
+
+function PaginationBar({ label, meta, pageParam }) {
+    const goTo = (page) => {
+        router.get(route('dashboard'), { [pageParam]: page }, { preserveScroll: true, preserveState: true });
+    };
+    return (
+        <div className="flex items-center gap-2 rounded border border-border bg-card px-3 py-2">
+            <span className="font-medium">{label}:</span>
+            <span>{meta.total} totali</span>
+            <button
+                type="button"
+                disabled={meta.currentPage <= 1}
+                onClick={() => goTo(meta.currentPage - 1)}
+                className="rounded px-1 hover:bg-accent disabled:opacity-30"
+            >
+                ‹
+            </button>
+            <span>{meta.currentPage}/{meta.lastPage}</span>
+            <button
+                type="button"
+                disabled={meta.currentPage >= meta.lastPage}
+                onClick={() => goTo(meta.currentPage + 1)}
+                className="rounded px-1 hover:bg-accent disabled:opacity-30"
+            >
+                ›
+            </button>
         </div>
     );
 }

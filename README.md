@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ferie
 
-## Getting Started
+App per la gestione delle ferie (Laravel + Inertia.js + React).
 
-First, run the development server:
+## Avvio con hot reload (modifiche live)
+
+**Importante:** servono **entrambi** i processi per vedere le modifiche senza ricaricare.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Dalla root del progetto
+npm run start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Poi apri [http://localhost:8000](http://localhost:8000) (o 8003 se 8000 è occupata).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Se le modifiche non si vedono
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Controlla che nel terminale ci siano **due** processi attivi: `laravel` e `vite`
+2. Se vedi solo Laravel, Vite non è partito: riavvia con `npm run start`
+3. Fai un hard refresh nel browser: **Cmd+Shift+R** (Mac) o **Ctrl+Shift+R** (Windows)
 
-## Learn More
+### Alternativa: build + watch (richiede refresh manuale)
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Terminale 1
+cd ferie-laravel && php artisan serve
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Terminale 2 – ricompila ad ogni modifica
+cd ferie-laravel && npm run dev:watch
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Poi ricarica la pagina per vedere le modifiche.
 
-## Deploy on Vercel
+### Altri comandi
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+# Build produzione (una tantum)
+npm run build
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Struttura
+
+- `ferie-laravel/` – applicazione Laravel con Inertia.js e React

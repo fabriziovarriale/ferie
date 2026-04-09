@@ -6,15 +6,18 @@ use App\Helpers\WorkingDays;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
+use App\Models\User;
+use App\Notifications\LeaveRequestSubmitted;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class LeaveRequestController extends Controller
 {
     public function store(Request $request): RedirectResponse
     {
         $rules = [
-            'leaveType' => 'required|string|in:FERIE,MALATTIA,PERMESSO,ROL',
+            'leaveType' => 'required|string|in:FERIE,MALATTIA,PERMESSO',
             'startDate' => 'required|date',
             'endDate' => 'required|date|after_or_equal:startDate',
             'requestedUnits' => 'nullable|integer|min:0',
@@ -32,7 +35,7 @@ class LeaveRequestController extends Controller
             'endDate.date' => 'Data fine non valida.',
             'endDate.after_or_equal' => 'Data fine deve essere ≥ data inizio.',
             'leaveType.required' => 'Seleziona tipo assenza.',
-            'leaveType.in' => 'Tipo assenza non valido.',
+            'leaveType.in' => 'Tipo assenza non valido. Valori ammessi: Ferie, Malattia, Permesso.',
             'requestedUnits.integer' => 'Ore non valide.',
             'requestedUnits.min' => 'Inserisci almeno 1 ora.',
             'note.max' => 'Note troppo lunghe.',
@@ -43,6 +46,8 @@ class LeaveRequestController extends Controller
         $targetUserId = $request->user()->isAdmin()
             ? (int) $validated['userId']
             : $request->user()->id;
+
+        // Più dipendenti possono avere assenze sugli stessi giorni (nessuna esclusività “globale” sul periodo).
 
         $leaveType = LeaveType::where('code', $validated['leaveType'])->first();
         if (! $leaveType) {
@@ -56,8 +61,9 @@ class LeaveRequestController extends Controller
             $requestedUnits = $days;
 
             if ($leaveType->deducts_balance) {
+                $currentYear = now()->year;
                 $balance = LeaveBalance::where('user_id', $targetUserId)
-                    ->where('year', now()->year)
+                    ->where('year', $currentYear)
                     ->first();
 
                 if (! $balance) {
@@ -66,7 +72,9 @@ class LeaveRequestController extends Controller
                     ]);
                 }
 
-                $remaining = $balance->allocated_days - $balance->used_days;
+                $usedDays = (int) LeaveRequest::sumDeductibleApprovedDaysByUserForYear($currentYear)
+                    ->get($targetUserId, 0);
+                $remaining = max(0, $balance->allocated_days - $usedDays);
 
                 if ($days > $remaining) {
                     return back()->withErrors([
@@ -78,7 +86,7 @@ class LeaveRequestController extends Controller
             return back()->withErrors(['requestedUnits' => 'Minimo 1 ora.']);
         }
 
-        LeaveRequest::create([
+        $leaveRequest = LeaveRequest::create([
             'user_id' => $targetUserId,
             'leave_type_code' => $validated['leaveType'],
             'start_date' => $validated['startDate'],
@@ -88,6 +96,59 @@ class LeaveRequestController extends Controller
             'note_user' => $validated['note'] ?? null,
         ]);
 
-        return redirect()->route('dashboard')->with('status', 'Richiesta inviata con successo.');
+        $admins = User::where('role', 'admin')->where('active', true)->get();
+        Notification::send($admins, new LeaveRequestSubmitted($leaveRequest->load('user')));
+
+        $warning = $this->checkJobRoleOverlap(
+            $targetUserId,
+            $validated['startDate'],
+            $validated['endDate']
+        );
+
+        return redirect()->route('dashboard')
+            ->with('status', 'Richiesta inviata con successo.')
+            ->with('warning', $warning);
+    }
+
+    private function checkJobRoleOverlap(int $userId, string $startDate, string $endDate): ?string
+    {
+        $user = User::find($userId);
+
+        if (! $user || ! $user->job_role) {
+            return null;
+        }
+
+        $conflict = LeaveRequest::query()
+            ->where('status', 'APPROVED')
+            ->where('user_id', '!=', $userId)
+            ->where('start_date', '<=', $endDate)
+            ->where('end_date', '>=', $startDate)
+            ->whereHas('user', fn ($q) => $q->where('job_role', $user->job_role)->where('active', true))
+            ->with('user')
+            ->first();
+
+        if (! $conflict) {
+            return null;
+        }
+
+        $colName = trim(($conflict->user->first_name ?? '').' '.($conflict->user->last_name ?? ''))
+            ?: $conflict->user->email;
+
+        return "un altro {$user->job_role} ({$colName}) è già in ferie nel periodo selezionato.";
+    }
+
+    public function cancel(Request $request, LeaveRequest $leaveRequest): RedirectResponse
+    {
+        if ($leaveRequest->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        if ($leaveRequest->status !== 'PENDING') {
+            return back()->with('status', 'Solo le richieste in attesa possono essere annullate.');
+        }
+
+        $leaveRequest->update(['status' => 'CANCELLED']);
+
+        return back()->with('status', 'Richiesta annullata.');
     }
 }

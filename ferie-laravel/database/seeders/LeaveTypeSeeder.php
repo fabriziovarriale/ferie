@@ -16,7 +16,6 @@ class LeaveTypeSeeder extends Seeder
             ['code' => 'FERIE', 'description' => 'Ferie', 'deducts_balance' => true, 'unit' => 'days'],
             ['code' => 'MALATTIA', 'description' => 'Malattia', 'deducts_balance' => false, 'unit' => 'days'],
             ['code' => 'PERMESSO', 'description' => 'Permesso', 'deducts_balance' => false, 'unit' => 'hours'],
-            ['code' => 'ROL', 'description' => 'ROL', 'deducts_balance' => true, 'unit' => 'hours'],
         ];
 
         foreach ($types as $type) {

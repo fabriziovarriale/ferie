@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\LeaveBalance;
+use App\Models\LeaveRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
@@ -18,12 +20,14 @@ class UsersController extends Controller
     {
         $year = (int) ($request->get('year') ?? now()->year);
 
+        $approvedUsedDaysByUser = LeaveRequest::sumDeductibleApprovedDaysByUserForYear($year);
+
         $users = User::where('active', true)
             ->where('role', '!=', 'admin')
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get()
-            ->map(fn (User $u) => $this->mapUser($u, $year));
+            ->map(fn (User $u) => $this->mapUser($u, $year, $approvedUsedDaysByUser));
 
         return Inertia::render('Admin/Users', [
             'users' => $users,
@@ -38,7 +42,7 @@ class UsersController extends Controller
             'lastName' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => 'required|string|in:user,admin',
+            'jobRole' => 'required|string|in:Designer,PM,Developer,Socio',
         ], [
             'firstName.required' => 'Inserisci il nome.',
             'lastName.required' => 'Inserisci il cognome.',
@@ -47,9 +51,11 @@ class UsersController extends Controller
             'email.unique' => 'Email già in uso.',
             'password.required' => 'Inserisci la password.',
             'password.confirmed' => 'Le password non coincidono.',
+            'jobRole.required' => 'Seleziona il ruolo.',
+            'jobRole.in' => 'Ruolo non valido.',
         ]);
 
-        $name = trim($validated['firstName'] . ' ' . $validated['lastName']) ?: $validated['email'];
+        $name = trim($validated['firstName'].' '.$validated['lastName']) ?: $validated['email'];
 
         User::create([
             'name' => $name,
@@ -57,7 +63,8 @@ class UsersController extends Controller
             'last_name' => $validated['lastName'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => $validated['role'],
+            'role' => 'user',
+            'job_role' => $validated['jobRole'],
             'active' => true,
         ]);
 
@@ -69,6 +76,11 @@ class UsersController extends Controller
         $validated = $request->validate([
             'allocated_days' => 'required|integer|min:0|max:365',
             'year' => 'required|integer|min:2020|max:2100',
+        ], [
+            'allocated_days.required' => 'Inserisci i giorni assegnati.',
+            'allocated_days.integer' => 'Il valore deve essere un numero intero.',
+            'allocated_days.min' => 'Il valore non può essere negativo.',
+            'allocated_days.max' => 'Massimo 365 giorni.',
         ]);
 
         LeaveBalance::updateOrCreate(
@@ -82,11 +94,28 @@ class UsersController extends Controller
         return back()->with('status', 'Budget aggiornato.');
     }
 
-    private function mapUser(User $u, int $year): array
+    public function destroy(User $user): RedirectResponse
+    {
+        if ($user->role === 'admin') {
+            return back()->withErrors(['delete' => 'Non è possibile eliminare un admin.']);
+        }
+
+        $user->delete();
+
+        return back()->with('status', 'Utente eliminato.');
+    }
+
+    /**
+     * @param  Collection<int|string, int|float|string>  $approvedUsedDaysByUser  user_id => somma giorni lavorativi da richieste APPROVED che scalano il budget (stessa logica dell'approvazione admin).
+     */
+    private function mapUser(User $u, int $year, $approvedUsedDaysByUser): array
     {
         $balance = LeaveBalance::where('user_id', $u->id)
             ->where('year', $year)
             ->first();
+
+        $allocated = (int) ($balance?->allocated_days ?? 0);
+        $used = (int) $approvedUsedDaysByUser->get($u->id, 0);
 
         return [
             'id' => (string) $u->id,
@@ -94,9 +123,10 @@ class UsersController extends Controller
             'lastName' => $u->last_name ?? '',
             'email' => $u->email ?? '',
             'role' => $u->role ?? 'user',
-            'allocatedDays' => $balance?->allocated_days ?? 0,
-            'usedDays' => $balance?->used_days ?? 0,
-            'remaining' => $balance ? ($balance->allocated_days - $balance->used_days) : 0,
+            'jobRole' => $u->job_role ?? '',
+            'allocatedDays' => $allocated,
+            'usedDays' => $used,
+            'remaining' => max(0, $allocated - $used),
         ];
     }
 }

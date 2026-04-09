@@ -138,4 +138,24 @@
     color: var(--muted-foreground);
     font-weight: 500;
   }
+
+  /* Calendario impatto assenze (dashboard): celle più grandi */
+  .dark .rdp-impact-calendar.rdp-root {
+    --rdp-cell-size: clamp(4.5rem, 12vw, 7.5rem);
+  }
+
+  @media (min-width: 1024px) {
+    .dark .rdp-impact-calendar.rdp-root {
+      --rdp-cell-size: 7.75rem;
+    }
+  }
+
+  .dark .rdp-impact-calendar .rdp-weekday {
+    font-size: 0.8rem;
+    padding-bottom: 0.35rem;
+  }
+
+  .dark .rdp-impact-calendar .rdp-caption_label {
+    font-size: 1.05rem;
+  }
 }
