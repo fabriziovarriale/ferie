@@ -7,7 +7,6 @@ use App\Models\LeaveRequest;
 use App\Notifications\LeaveRequestStatusChanged;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Bus;
 
 class LeaveRequestController extends Controller
 {
@@ -25,15 +24,7 @@ class LeaveRequestController extends Controller
         ]);
 
         if ($leaveRequest->user) {
-            $notifiable = $leaveRequest->user;
-            $notification = new LeaveRequestStatusChanged($leaveRequest);
-            Bus::dispatchAfterResponse(function () use ($notifiable, $notification) {
-                try {
-                    $notifiable->notify($notification);
-                } catch (\Throwable $e) {
-                    logger()->error('LeaveRequestStatusChanged notification failed: '.$e->getMessage());
-                }
-            });
+            $leaveRequest->user->notify(new LeaveRequestStatusChanged($leaveRequest));
         }
 
         return back()->with('status', 'Richiesta approvata.');
@@ -76,15 +67,7 @@ class LeaveRequestController extends Controller
         ]);
 
         if ($leaveRequest->user) {
-            $notifiable = $leaveRequest->user;
-            $fresh = $leaveRequest->fresh();
-            Bus::dispatchAfterResponse(function () use ($notifiable, $fresh) {
-                try {
-                    $notifiable->notify(new LeaveRequestStatusChanged($fresh));
-                } catch (\Throwable $e) {
-                    logger()->error('LeaveRequestStatusChanged notification failed: '.$e->getMessage());
-                }
-            });
+            $leaveRequest->user->notify(new LeaveRequestStatusChanged($leaveRequest->fresh()));
         }
 
         return back()->with('status', 'Richiesta rifiutata.');

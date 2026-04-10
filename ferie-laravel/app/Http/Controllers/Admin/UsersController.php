@@ -10,7 +10,6 @@ use App\Notifications\WelcomeNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
@@ -70,13 +69,7 @@ class UsersController extends Controller
             'active' => true,
         ]);
 
-        Bus::dispatchAfterResponse(function () use ($user) {
-            try {
-                $user->notify(new WelcomeNotification($user, createdByAdmin: true));
-            } catch (\Throwable $e) {
-                logger()->error('WelcomeNotification failed: '.$e->getMessage());
-            }
-        });
+        $user->notify(new WelcomeNotification($user, createdByAdmin: true));
 
         return back()->with('status', 'Utente creato.');
     }

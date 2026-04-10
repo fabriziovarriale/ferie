@@ -8,7 +8,6 @@ use App\Notifications\WelcomeNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
@@ -59,13 +58,7 @@ class RegisteredUserController extends Controller
             'active'     => true,
         ]);
 
-        Bus::dispatchAfterResponse(function () use ($user) {
-            try {
-                $user->notify(new WelcomeNotification($user, createdByAdmin: false));
-            } catch (\Throwable $e) {
-                logger()->error('WelcomeNotification failed: '.$e->getMessage());
-            }
-        });
+        $user->notify(new WelcomeNotification($user, createdByAdmin: false));
 
         Auth::login($user);
 
