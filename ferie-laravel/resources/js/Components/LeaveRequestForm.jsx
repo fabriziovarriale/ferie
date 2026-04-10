@@ -192,14 +192,25 @@ export default function LeaveRequestForm({
                     />
                     {errors.startDate && (
                         errors.startDate.includes('Budget ferie') && (isAdminUser || isAdmin) && data.userId ? (
-                            <div className="mt-2 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                                <span>Budget ferie non impostato per questo dipendente.{' '}</span>
-                                <Link
-                                    href={`${route('admin.users.index')}?openUser=${data.userId}`}
-                                    className="shrink-0 font-semibold underline hover:opacity-80"
-                                >
-                                    Imposta ora →
-                                </Link>
+                            <div className="mt-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3">
+                                <div className="flex items-start gap-2.5">
+                                    <svg className="mt-0.5 h-4 w-4 shrink-0 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                                    </svg>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-destructive">Budget ferie non impostato</p>
+                                        <p className="mt-0.5 text-xs text-destructive/80">Questo dipendente non ha ancora un budget assegnato per l'anno corrente.</p>
+                                        <Link
+                                            href={`${route('admin.users.index')}?openUser=${data.userId}`}
+                                            className="mt-2 inline-flex items-center gap-1 rounded-md bg-destructive px-2.5 py-1 text-xs font-medium text-destructive-foreground hover:opacity-90"
+                                        >
+                                            Imposta budget ora
+                                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </Link>
+                                    </div>
+                                </div>
                             </div>
                         ) : (
                             <InputError message={errors.startDate} className="mt-2" />

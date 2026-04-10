@@ -66,8 +66,16 @@ export default function RequestDetailSlideover({ request: req, show, onClose }) 
         <Slideover show={show} onClose={onClose} title="Dettaglio richiesta">
             <div className="space-y-4">
                 {req.roleConflictWarning && (
-                    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-                        <span className="font-semibold">Attenzione: </span>{req.roleConflictWarning}
+                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                        <div className="flex items-start gap-2.5">
+                            <svg className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                            </svg>
+                            <div>
+                                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">Conflitto di ruolo</p>
+                                <p className="mt-0.5 text-xs text-amber-600/90 dark:text-amber-400/80">{req.roleConflictWarning}</p>
+                            </div>
+                        </div>
                     </div>
                 )}
                 <dl className="space-y-3">
