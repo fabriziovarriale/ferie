@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\User;
+use App\Notifications\WelcomeNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -57,7 +58,7 @@ class UsersController extends Controller
 
         $name = trim($validated['firstName'].' '.$validated['lastName']) ?: $validated['email'];
 
-        User::create([
+        $user = User::create([
             'name' => $name,
             'first_name' => $validated['firstName'],
             'last_name' => $validated['lastName'],
@@ -67,6 +68,8 @@ class UsersController extends Controller
             'job_role' => $validated['jobRole'],
             'active' => true,
         ]);
+
+        $user->notify(new WelcomeNotification($user, createdByAdmin: true));
 
         return back()->with('status', 'Utente creato.');
     }

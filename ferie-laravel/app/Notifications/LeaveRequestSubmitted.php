@@ -27,13 +27,31 @@ class LeaveRequestSubmitted extends Notification implements ShouldQueue
             ? trim(($employee->first_name ?? '').' '.($employee->last_name ?? '')) ?: $employee->email
             : 'Dipendente';
 
+        $typeLabel = match ($req->leave_type_code) {
+            'FERIE'    => 'Ferie',
+            'MALATTIA' => 'Malattia',
+            'PERMESSO' => 'Permesso',
+            default    => $req->leave_type_code,
+        };
+
+        $startFmt = $req->start_date->format('d/m/Y');
+        $endFmt   = $req->end_date->format('d/m/Y');
+        $isSameDay = $startFmt === $endFmt;
+        $period = $isSameDay ? $startFmt : "{$startFmt} — {$endFmt}";
+
+        $units = $req->leave_type_code === 'PERMESSO'
+            ? "{$req->requested_units} ore"
+            : "{$req->requested_units} ".($req->requested_units === 1 ? 'giorno' : 'giorni');
+
         return (new MailMessage)
-            ->subject("Nuova richiesta ferie da {$name}")
-            ->line("**{$name}** ha inviato una nuova richiesta.")
-            ->line("Tipo: **{$req->leave_type_code}**")
-            ->line("Periodo: **{$req->start_date->format('d/m/Y')}** — **{$req->end_date->format('d/m/Y')}**")
-            ->line("Giorni/Ore richieste: **{$req->requested_units}**")
+            ->subject("Nuova richiesta di {$typeLabel} da {$name}")
+            ->greeting("Ciao!")
+            ->line("**{$name}** ha inviato una nuova richiesta di **{$typeLabel}**.")
+            ->line("**Periodo:** {$period}")
+            ->line("**Durata:** {$units}")
+            ->when($req->note_user, fn ($mail) => $mail->line("**Nota:** {$req->note_user}"))
             ->action('Gestisci richiesta', url('/dashboard'))
-            ->line('Accedi alla dashboard per approvare o rifiutare.');
+            ->line('Accedi alla dashboard per approvare o rifiutare la richiesta.')
+            ->salutation('Il sistema Ferie MVP');
     }
 }

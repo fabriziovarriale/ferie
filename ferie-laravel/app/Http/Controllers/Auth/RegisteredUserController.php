@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Notifications\WelcomeNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -56,6 +57,8 @@ class RegisteredUserController extends Controller
             'role'       => 'user',
             'active'     => true,
         ]);
+
+        $user->notify(new WelcomeNotification($user, createdByAdmin: false));
 
         Auth::login($user);
 
