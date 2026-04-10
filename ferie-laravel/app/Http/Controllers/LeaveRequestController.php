@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\LeaveRequestSubmitted;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Notification;
 
 class LeaveRequestController extends Controller
@@ -97,7 +98,14 @@ class LeaveRequestController extends Controller
         ]);
 
         $admins = User::where('role', 'admin')->where('active', true)->get();
-        Notification::send($admins, new LeaveRequestSubmitted($leaveRequest->load('user')));
+        $loadedRequest = $leaveRequest->load('user');
+        Bus::dispatchAfterResponse(function () use ($admins, $loadedRequest) {
+            try {
+                Notification::send($admins, new LeaveRequestSubmitted($loadedRequest));
+            } catch (\Throwable $e) {
+                logger()->error('LeaveRequestSubmitted notification failed: '.$e->getMessage());
+            }
+        });
 
         $warning = $this->checkJobRoleOverlap(
             $targetUserId,
