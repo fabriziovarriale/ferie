@@ -335,8 +335,8 @@ export default function ApprovedLeaveImpactCalendar({ approvedEntries = [], holi
                                             <p className="font-medium text-foreground">{row.userFullName}</p>
                                             <p className="text-muted-foreground">{row.leaveType}</p>
                                             <p className="text-muted-foreground">Giorni richiesti: {row.requestedUnits}</p>
-                                            <p className="text-muted-foreground">Data richiesta: {formatDateTime(row.createdAt)}</p>
-                                            <p className="text-muted-foreground">Data approvazione: {formatDateTime(row.approvedAt)}</p>
+                                            <p className="text-muted-foreground">Richiesto il {formatDateTime(row.createdAt)}</p>
+                                            <p className="text-muted-foreground">Approvato il {formatDateTime(row.approvedAt)}</p>
                                         </div>
                                     </li>
                                 ))}

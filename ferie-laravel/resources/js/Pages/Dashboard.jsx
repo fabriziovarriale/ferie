@@ -441,7 +441,7 @@ function StatusBadge({ status }) {
         CANCELLED: 'Annullata',
     };
     return (
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${styles[status] || 'bg-gray-100'}`}>
+        <span className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status] || 'bg-gray-100'}`}>
             {labels[status] || status}
         </span>
     );
