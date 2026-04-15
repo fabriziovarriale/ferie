@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\CompanyHolidaysController;
 use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeaveRequestController;
@@ -37,9 +36,6 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::patch('/requests/{leaveRequest}/revoke', [App\Http\Controllers\Admin\LeaveRequestController::class, 'revoke'])->name('requests.revoke');
     Route::delete('/requests/{leaveRequest}', [App\Http\Controllers\Admin\LeaveRequestController::class, 'destroy'])->name('requests.destroy');
 
-    Route::get('/holidays', [CompanyHolidaysController::class, 'index'])->name('holidays.index');
-    Route::post('/holidays', [CompanyHolidaysController::class, 'store'])->name('holidays.store');
-    Route::delete('/holidays/{id}', [CompanyHolidaysController::class, 'destroy'])->name('holidays.destroy');
 });
 
 Route::middleware('auth')->group(function () {

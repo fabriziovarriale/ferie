@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ItalianNationalHolidays;
 use App\Models\LeaveBalance;
 use App\Models\LeaveRequest;
 use App\Models\LeaveType;
@@ -49,6 +50,19 @@ class DashboardController extends Controller
 
         $calendarFrom = now()->startOfYear()->subYear();
         $calendarTo = now()->endOfYear()->addYear();
+
+        $rowsToInsert = [];
+        for ($yearCursor = $calendarFrom->year; $yearCursor <= $calendarTo->year; $yearCursor++) {
+            foreach (ItalianNationalHolidays::forYear($yearCursor) as $holiday) {
+                $rowsToInsert[] = [
+                    'date' => $holiday['date'],
+                    'description' => $holiday['description'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+        }
+        DB::table('company_holidays')->insertOrIgnore($rowsToInsert);
 
         $approvedLeaveCalendar = LeaveRequest::query()
             ->where('status', 'APPROVED')
