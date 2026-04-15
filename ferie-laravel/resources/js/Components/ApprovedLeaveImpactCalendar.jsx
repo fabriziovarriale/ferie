@@ -1,4 +1,5 @@
 import Slideover from '@/Components/Slideover';
+import { Dialog, DialogPanel, Transition, TransitionChild } from '@headlessui/react';
 import { format, parse } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -19,6 +20,10 @@ function leaveTypeColor(type) {
 
 function parseYmd(ymd) {
     return parse(ymd, 'yyyy-MM-dd', new Date());
+}
+
+function normalizeText(value) {
+    return (value ?? '').toString().trim().toLowerCase();
 }
 
 function workingDaysBetween(startDate, endDate) {
@@ -119,23 +124,35 @@ export default function ApprovedLeaveImpactCalendar({ approvedEntries = [], holi
     const [detailDay, setDetailDay] = useState(null);
     const [nameFilter, setNameFilter] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
+    const [nameDialogOpen, setNameDialogOpen] = useState(false);
+    const [typeDialogOpen, setTypeDialogOpen] = useState(false);
 
     const holidaySet = useMemo(() => new Set(holidays), [holidays]);
 
     const allNames = useMemo(() => {
-        const s = new Set(approvedEntries.map((e) => e.userFullName));
+        const s = new Set(
+            approvedEntries
+                .map((e) => (e.userFullName ?? '').trim())
+                .filter(Boolean)
+        );
         return [...s].sort();
     }, [approvedEntries]);
 
     const allTypes = useMemo(() => {
-        const s = new Set(approvedEntries.map((e) => e.leaveType));
+        const s = new Set(
+            approvedEntries
+                .map((e) => (e.leaveType ?? '').trim())
+                .filter(Boolean)
+        );
         return [...s].sort();
     }, [approvedEntries]);
 
     const filteredEntries = useMemo(() => {
+        const normalizedNameFilter = normalizeText(nameFilter);
+        const normalizedTypeFilter = normalizeText(typeFilter);
         return approvedEntries.filter((e) => {
-            if (nameFilter && e.userFullName !== nameFilter) return false;
-            if (typeFilter && e.leaveType !== typeFilter) return false;
+            if (normalizedNameFilter && normalizeText(e.userFullName) !== normalizedNameFilter) return false;
+            if (normalizedTypeFilter && normalizeText(e.leaveType) !== normalizedTypeFilter) return false;
             return true;
         });
     }, [approvedEntries, nameFilter, typeFilter]);
@@ -231,32 +248,22 @@ export default function ApprovedLeaveImpactCalendar({ approvedEntries = [], holi
                 <>
                     {/* Filtri */}
                     <div className="mb-4 flex flex-wrap gap-3">
-                        <div className="flex items-center gap-2">
-                            <label className="text-sm text-muted-foreground whitespace-nowrap">Dipendente</label>
-                            <select
-                                value={nameFilter}
-                                onChange={(e) => setNameFilter(e.target.value)}
-                                className="rounded border border-border bg-card px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                            >
-                                <option value="">Tutti</option>
-                                {allNames.map((n) => (
-                                    <option key={n} value={n}>{n}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <label className="text-sm text-muted-foreground whitespace-nowrap">Tipo assenza</label>
-                            <select
-                                value={typeFilter}
-                                onChange={(e) => setTypeFilter(e.target.value)}
-                                className="rounded border border-border bg-card px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                            >
-                                <option value="">Tutti</option>
-                                {allTypes.map((t) => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setNameDialogOpen(true)}
+                            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground hover:bg-accent/50"
+                        >
+                            <span className="text-muted-foreground">Dipendente:</span>
+                            <span className="font-medium">{nameFilter || 'Tutti'}</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setTypeDialogOpen(true)}
+                            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm text-foreground hover:bg-accent/50"
+                        >
+                            <span className="text-muted-foreground">Tipo assenza:</span>
+                            <span className="font-medium">{typeFilter || 'Tutti'}</span>
+                        </button>
                         {(nameFilter || typeFilter) && (
                             <button
                                 type="button"
@@ -343,8 +350,93 @@ export default function ApprovedLeaveImpactCalendar({ approvedEntries = [], holi
                             </ul>
                         ) : null}
                     </Slideover>
+
+                    <RadioFilterDialog
+                        show={nameDialogOpen}
+                        title="Filtra per dipendente"
+                        allLabel="Tutti"
+                        options={allNames}
+                        value={nameFilter}
+                        onChange={setNameFilter}
+                        onClose={() => setNameDialogOpen(false)}
+                    />
+
+                    <RadioFilterDialog
+                        show={typeDialogOpen}
+                        title="Filtra per tipo assenza"
+                        allLabel="Tutti"
+                        options={allTypes}
+                        value={typeFilter}
+                        onChange={setTypeFilter}
+                        onClose={() => setTypeDialogOpen(false)}
+                    />
                 </>
             )}
         </section>
+    );
+}
+
+function RadioFilterDialog({ show, title, allLabel, options, value, onChange, onClose }) {
+    return (
+        <Transition show={show} leave="duration-200">
+            <Dialog as="div" className="fixed inset-0 z-[60] flex items-center justify-center px-4" onClose={onClose}>
+                <TransitionChild
+                    enter="ease-out duration-200"
+                    enterFrom="opacity-0"
+                    enterTo="opacity-100"
+                    leave="ease-in duration-150"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
+                >
+                    <div className="absolute inset-0 bg-black/50" />
+                </TransitionChild>
+
+                <TransitionChild
+                    enter="ease-out duration-200"
+                    enterFrom="opacity-0 scale-95"
+                    enterTo="opacity-100 scale-100"
+                    leave="ease-in duration-150"
+                    leaveFrom="opacity-100 scale-100"
+                    leaveTo="opacity-0 scale-95"
+                >
+                    <DialogPanel className="relative w-full max-w-md rounded-lg border border-border bg-card p-5 shadow-xl">
+                        <h3 className="mb-4 text-base font-semibold text-foreground">{title}</h3>
+                        <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                            <label className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-accent/50">
+                                <input
+                                    type="radio"
+                                    name={title}
+                                    checked={value === ''}
+                                    onChange={() => onChange('')}
+                                    className="h-4 w-4 border-border bg-card text-primary focus:ring-primary"
+                                />
+                                <span className="text-sm text-foreground">{allLabel}</span>
+                            </label>
+                            {options.map((option) => (
+                                <label key={option} className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 hover:bg-accent/50">
+                                    <input
+                                        type="radio"
+                                        name={title}
+                                        checked={value === option}
+                                        onChange={() => onChange(option)}
+                                        className="h-4 w-4 border-border bg-card text-primary focus:ring-primary"
+                                    />
+                                    <span className="text-sm text-foreground">{option}</span>
+                                </label>
+                            ))}
+                        </div>
+                        <div className="mt-5 flex justify-end">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                            >
+                                Chiudi
+                            </button>
+                        </div>
+                    </DialogPanel>
+                </TransitionChild>
+            </Dialog>
+        </Transition>
     );
 }
