@@ -17,18 +17,18 @@ export default function Edit({ mustVerifyEmail, status }) {
 
             <div className="py-6">
                 <div className="mx-auto max-w-3xl space-y-6 px-4 sm:px-6 lg:px-8">
-                    <div className="rounded-lg border border-border bg-card p-6 shadow">
+                    <div className="rounded-lg border border-border bg-card p-4 shadow sm:p-6">
                         <UpdateProfileInformationForm
                             mustVerifyEmail={mustVerifyEmail}
                             status={status}
                         />
                     </div>
 
-                    <div className="rounded-lg border border-border bg-card p-6 shadow">
+                    <div className="rounded-lg border border-border bg-card p-4 shadow sm:p-6">
                         <UpdatePasswordForm />
                     </div>
 
-                    <div className="rounded-lg border border-border bg-card p-6 shadow">
+                    <div className="rounded-lg border border-border bg-card p-4 shadow sm:p-6">
                         <DeleteUserForm />
                     </div>
                 </div>

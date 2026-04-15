@@ -51,8 +51,8 @@ export default function Users({ users, year }) {
             <Head title="Utenti" />
 
             <div className="py-6">
-                <div className="mx-auto max-w-6xl">
-                    <div className="rounded-lg bg-card border border-border p-6 shadow">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div className="rounded-lg bg-card border border-border p-4 shadow sm:p-6">
                         {status && (
                             <p className="mb-4 rounded-md border border-emerald-500/50 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400">
                                 {status}
@@ -71,14 +71,17 @@ export default function Users({ users, year }) {
                                         <li
                                             key={u.id}
                                             onClick={() => setSelectedUser(u)}
-                                            className="cursor-pointer rounded-lg border border-border p-4 hover:bg-accent/50"
+                                            className="cursor-pointer rounded-lg border border-border p-3 sm:p-4 hover:bg-accent/50"
                                         >
                                             <div className="flex items-start justify-between gap-2">
-                                                <div>
-                                                    <p className="font-medium text-foreground">
+                                                <div className="min-w-0">
+                                                    <p className="truncate font-medium text-foreground">
                                                         {[u.firstName, u.lastName].filter(Boolean).join(' ') || '—'}
+                                                        <span className="mx-2 text-muted-foreground">·</span>
+                                                        <span className="text-sm font-normal text-muted-foreground">
+                                                            {u.email}
+                                                        </span>
                                                     </p>
-                                                    <p className="text-sm text-muted-foreground">{u.email}</p>
                                                 </div>
                                                 {u.jobRole && (
                                                     <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
@@ -87,7 +90,7 @@ export default function Users({ users, year }) {
                                                 )}
                                             </div>
                                             <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
-                                                <div className="rounded bg-muted/50 px-2 py-1">
+                                                <div className="rounded bg-sky-500/10 px-2 py-1">
                                                     <p className="text-muted-foreground">Budget</p>
                                                     <p className="font-semibold text-foreground">{u.allocatedDays}</p>
                                                 </div>
@@ -109,7 +112,7 @@ export default function Users({ users, year }) {
                                     <table className="min-w-full divide-y divide-border">
                                         <thead>
                                             <tr>
-                                                <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Nome</th>
+                                                <th className="px-4 py-2 pl-0 text-left text-xs font-medium uppercase text-muted-foreground">Nome</th>
                                                 <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Email</th>
                                                 <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Ruolo</th>
                                                 <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Budget {year}</th>
@@ -124,7 +127,7 @@ export default function Users({ users, year }) {
                                                     onClick={() => setSelectedUser(u)}
                                                     className="cursor-pointer transition-colors hover:bg-accent/50"
                                                 >
-                                                    <td className="px-4 py-2 text-foreground">
+                                                    <td className="px-4 py-2 pl-0 text-foreground">
                                                         {[u.firstName, u.lastName].filter(Boolean).join(' ') || '—'}
                                                     </td>
                                                     <td className="px-4 py-2 text-foreground">{u.email}</td>

@@ -23,7 +23,6 @@ export default function Dashboard({
     rejectedMeta = null,
 }) {
     const { errors = {} } = usePage().props;
-    const userFullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Utente';
     const [createSlideoverOpen, setCreateSlideoverOpen] = useState(false);
 
     const { flash = {} } = usePage().props;
@@ -37,22 +36,14 @@ export default function Dashboard({
     return (
         <AuthenticatedLayout
             header={
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <h2 className="text-xl font-semibold leading-tight text-foreground">
-                            Ferie MVP
-                        </h2>
-                        <p className="text-sm text-muted-foreground">
-                            {userFullName}
-                            <span className="ml-2 rounded border px-2 py-0.5 text-xs">
-                                {isAdmin ? 'Admin' : 'Dipendente'}
-                            </span>
-                        </p>
-                    </div>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-xl font-semibold leading-tight text-foreground">
+                        Dashboard
+                    </h2>
                     <button
                         type="button"
                         onClick={() => setCreateSlideoverOpen(true)}
-                        className="inline-flex shrink-0 items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                        className="inline-flex shrink-0 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
                     >
                         Crea richiesta
                     </button>
@@ -62,7 +53,7 @@ export default function Dashboard({
             <Head title="Dashboard - Ferie" />
 
             <div className="py-6">
-                <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6 lg:px-8">
+                <div className="mx-auto max-w-7xl space-y-6 px-4 sm:px-6 lg:px-8">
                     {flash.status && (
                         <div className="rounded-md bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
                             {flash.status}
@@ -162,21 +153,21 @@ function EmployeeView({ balance, requests }) {
             <BalanceBar balance={balance} />
 
             <section className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-lg border-l-4 border-l-primary bg-primary/10 p-4">
+                <div className="rounded-lg border-l-4 border-l-primary bg-primary/10 p-3 sm:p-4">
                     <p className="text-sm text-muted-foreground">Giorni totali</p>
                     <p className="text-2xl font-semibold text-foreground">{balance?.total ?? '-'}</p>
                 </div>
-                <div className="rounded-lg border-l-4 border-l-amber-500 bg-amber-500/10 p-4">
+                <div className="rounded-lg border-l-4 border-l-amber-500 bg-amber-500/10 p-3 sm:p-4">
                     <p className="text-sm text-muted-foreground">Giorni usati</p>
                     <p className="text-2xl font-semibold text-foreground">{balance?.used ?? '-'}</p>
                 </div>
-                <div className="rounded-lg border-l-4 border-l-emerald-500 bg-emerald-500/10 p-4">
+                <div className="rounded-lg border-l-4 border-l-emerald-500 bg-emerald-500/10 p-3 sm:p-4">
                     <p className="text-sm text-muted-foreground">Giorni residui</p>
                     <p className="text-2xl font-semibold text-foreground">{balance?.remaining ?? '-'}</p>
                 </div>
             </section>
 
-            <div className="rounded-lg bg-card border border-border p-6 shadow">
+            <div className="rounded-lg bg-card border border-border p-4 shadow sm:p-6">
                 <h3 className="text-lg font-medium text-foreground">Storico richieste</h3>
                 <p className="mb-4 text-sm text-muted-foreground">Elenco richieste con stato</p>
 
@@ -187,7 +178,7 @@ function EmployeeView({ balance, requests }) {
                         {/* Card layout — mobile */}
                         <ul className="space-y-3 sm:hidden">
                             {requests.map((r) => (
-                                <li key={r.id} className="rounded-lg border border-border p-4">
+                                <li key={r.id} className="rounded-lg border border-border p-3 sm:p-4">
                                     <div className="flex items-start justify-between gap-2">
                                         <div>
                                             <p className="font-medium text-foreground">{r.leaveType}</p>
@@ -220,7 +211,7 @@ function EmployeeView({ balance, requests }) {
                             <table className="min-w-full divide-y divide-border">
                                 <thead>
                                     <tr>
-                                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Tipo</th>
+                                        <th className="px-4 py-2 pl-0 text-left text-xs font-medium uppercase text-muted-foreground">Tipo</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Inizio</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Fine</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Stato</th>
@@ -231,7 +222,7 @@ function EmployeeView({ balance, requests }) {
                                 <tbody className="divide-y divide-border">
                                     {requests.map((r) => (
                                         <tr key={r.id}>
-                                            <td className="px-4 py-2 text-foreground">{r.leaveType}</td>
+                                            <td className="px-4 py-2 pl-0 text-foreground">{r.leaveType}</td>
                                             <td className="px-4 py-2 text-foreground">{r.startDate}</td>
                                             <td className="px-4 py-2 text-foreground">{r.endDate}</td>
                                             <td className="px-4 py-2"><StatusBadge status={r.status} /></td>
@@ -303,21 +294,21 @@ function AdminView({ pendingRequests, approvedRequests, approvedMeta, rejectedRe
     return (
         <div className="space-y-6">
             <section className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-lg border-l-4 border-l-primary bg-primary/10 p-4">
+                <div className="rounded-lg border-l-4 border-l-primary bg-primary/10 p-3 sm:p-4">
                     <p className="text-sm text-muted-foreground">Richieste in attesa</p>
                     <p className="text-2xl font-semibold text-foreground">{pendingRequests.length}</p>
                 </div>
-                <div className="rounded-lg border-l-4 border-l-emerald-500 bg-emerald-500/10 p-4">
+                <div className="rounded-lg border-l-4 border-l-emerald-500 bg-emerald-500/10 p-3 sm:p-4">
                     <p className="text-sm text-muted-foreground">Richieste approvate</p>
                     <p className="text-2xl font-semibold text-foreground">{approvedRequests.length}</p>
                 </div>
-                <div className="rounded-lg border-l-4 border-l-destructive bg-destructive/10 p-4">
+                <div className="rounded-lg border-l-4 border-l-destructive bg-destructive/10 p-3 sm:p-4">
                     <p className="text-sm text-muted-foreground">Richieste rifiutate</p>
                     <p className="text-2xl font-semibold text-foreground">{rejectedRequests.length}</p>
                 </div>
             </section>
 
-            <div className="rounded-lg bg-card border border-border p-6 shadow">
+            <div className="rounded-lg bg-card border border-border p-4 shadow sm:p-6">
                 <div className="mb-4">
                     <h3 className="text-lg font-medium text-foreground">Richieste</h3>
                     <p className="text-sm text-muted-foreground">Elenco di tutte le richieste con stato</p>
@@ -333,7 +324,7 @@ function AdminView({ pendingRequests, approvedRequests, approvedMeta, rejectedRe
                                 <li
                                     key={r.id}
                                     onClick={() => openDetail(r)}
-                                    className="cursor-pointer rounded-lg border border-border p-4 hover:bg-accent/50"
+                                    className="cursor-pointer rounded-lg border border-border p-3 sm:p-4 hover:bg-accent/50"
                                 >
                                     <div className="flex items-start justify-between gap-2">
                                         <div>
@@ -353,7 +344,7 @@ function AdminView({ pendingRequests, approvedRequests, approvedMeta, rejectedRe
                             <table className="min-w-full divide-y divide-border">
                                 <thead>
                                     <tr>
-                                        <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Dipendente</th>
+                                        <th className="px-4 py-2 pl-0 text-left text-xs font-medium uppercase text-muted-foreground">Dipendente</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Tipo</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Periodo</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium uppercase text-muted-foreground">Stato</th>
@@ -366,7 +357,7 @@ function AdminView({ pendingRequests, approvedRequests, approvedMeta, rejectedRe
                                             onClick={() => openDetail(r)}
                                             className="cursor-pointer transition-colors hover:bg-accent/50"
                                         >
-                                            <td className="px-4 py-2 text-foreground">{r.userFullName}</td>
+                                            <td className="px-4 py-2 pl-0 text-foreground">{r.userFullName}</td>
                                             <td className="px-4 py-2 text-foreground">{r.leaveType}</td>
                                             <td className="px-4 py-2 text-foreground">{r.startDate} - {r.endDate}</td>
                                             <td className="px-4 py-2"><StatusBadge status={r.status} /></td>

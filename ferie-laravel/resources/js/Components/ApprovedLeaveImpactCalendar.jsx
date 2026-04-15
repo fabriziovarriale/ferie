@@ -21,6 +21,22 @@ function parseYmd(ymd) {
     return parse(ymd, 'yyyy-MM-dd', new Date());
 }
 
+function workingDaysBetween(startDate, endDate) {
+    if (!startDate || !endDate) return 0;
+    const start = parseYmd(startDate);
+    const end = parseYmd(endDate);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 0;
+
+    let total = 0;
+    const cursor = new Date(start);
+    while (cursor <= end) {
+        const dow = cursor.getDay();
+        if (dow !== 0 && dow !== 6) total += 1;
+        cursor.setDate(cursor.getDate() + 1);
+    }
+    return total;
+}
+
 function groupEntriesByUser(entries) {
     if (!entries?.length) return [];
     const map = new Map();
@@ -36,6 +52,32 @@ function groupEntriesByUser(entries) {
         leaveType: g.types.join(' · '),
         primaryType: g.types[0],
     }));
+}
+
+function buildDetailRows(entries) {
+    if (!entries?.length) return [];
+    const map = new Map();
+    for (const e of entries) {
+        if (!map.has(e.requestId)) {
+            map.set(e.requestId, {
+                requestId: e.requestId,
+                userFullName: e.userFullName,
+                leaveType: e.leaveType,
+                requestedUnits: e.requestedUnits > 0 ? e.requestedUnits : workingDaysBetween(e.startDate, e.endDate),
+                primaryType: e.leaveType,
+                createdAt: e.createdAt ?? null,
+                approvedAt: e.approvedAt ?? null,
+            });
+        }
+    }
+    return [...map.values()];
+}
+
+function formatDateTime(value) {
+    if (!value) return '—';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '—';
+    return format(d, 'dd/MM/yyyy HH:mm');
 }
 
 function initials(name) {
@@ -59,6 +101,11 @@ function buildDayIndex(approvedEntries) {
                 requestId: item.id,
                 userFullName: item.userFullName,
                 leaveType: item.leaveType,
+                requestedUnits: item.requestedUnits ?? 0,
+                startDate: item.startDate,
+                endDate: item.endDate,
+                createdAt: item.createdAt ?? null,
+                approvedAt: item.approvedAt ?? null,
             });
             cursor.setDate(cursor.getDate() + 1);
         }
@@ -102,7 +149,7 @@ export default function ApprovedLeaveImpactCalendar({ approvedEntries = [], holi
 
     const detailKey = detailDay ? format(detailDay, 'yyyy-MM-dd') : null;
     const detailRaw = detailKey ? byDateKey[detailKey] ?? [] : [];
-    const detailRows = groupEntriesByUser(detailRaw);
+    const detailRows = buildDetailRows(detailRaw);
 
     const closeDetail = () => setDetailDay(null);
 
@@ -127,16 +174,17 @@ export default function ApprovedLeaveImpactCalendar({ approvedEntries = [], holi
             <td {...tdProps} className={tdClass}>
                 <div
                     className={[
-                        'flex min-h-[6.25rem] flex-col gap-1 rounded-sm border lg:min-h-[7rem]',
+                        'flex h-[7.5rem] min-h-[7.5rem] cursor-pointer flex-col gap-1 overflow-hidden rounded-sm border sm:h-[8.5rem] sm:min-h-[8.5rem]',
                         has && !isNonWorking ? 'border-emerald-500/40 bg-emerald-500/15' : '',
                         has && isNonWorking ? 'border-amber-500/40' : '',
                         !has ? 'border-transparent' : '',
                     ].filter(Boolean).join(' ')}
                     style={hatchStyle}
+                    onClick={() => setDetailDay(day.date)}
                 >
                     <div className="flex shrink-0 justify-start">{children}</div>
                     {has ? (
-                        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden px-0.5 pb-1">
+                        <div className="hide-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-0.5 pb-1">
                             {entries.slice(0, MAX_NAMES_IN_CELL).map((e, i) => (
                                 <div
                                     key={`${e.userFullName}-${i}`}
@@ -146,7 +194,7 @@ export default function ApprovedLeaveImpactCalendar({ approvedEntries = [], holi
                                     <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none text-white ${leaveTypeColor(e.primaryType)}`}>
                                         {initials(e.userFullName)}
                                     </span>
-                                    <span className="min-w-0 flex-1 leading-tight">
+                                    <span className="hidden min-w-0 flex-1 leading-tight sm:block">
                                         <span className="block truncate text-[11px] font-semibold text-foreground">
                                             {e.userFullName}
                                         </span>
@@ -277,7 +325,7 @@ export default function ApprovedLeaveImpactCalendar({ approvedEntries = [], holi
                             <ul className="space-y-3 text-sm">
                                 {detailRows.map((row, idx) => (
                                     <li
-                                        key={`${row.userFullName}-${idx}`}
+                                        key={`${row.requestId}-${idx}`}
                                         className="flex gap-2 border-b border-border/60 pb-3 last:border-0 last:pb-0"
                                     >
                                         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${leaveTypeColor(row.primaryType)}`}>
@@ -286,6 +334,9 @@ export default function ApprovedLeaveImpactCalendar({ approvedEntries = [], holi
                                         <div className="min-w-0">
                                             <p className="font-medium text-foreground">{row.userFullName}</p>
                                             <p className="text-muted-foreground">{row.leaveType}</p>
+                                            <p className="text-muted-foreground">Giorni richiesti: {row.requestedUnits}</p>
+                                            <p className="text-muted-foreground">Data richiesta: {formatDateTime(row.createdAt)}</p>
+                                            <p className="text-muted-foreground">Data approvazione: {formatDateTime(row.approvedAt)}</p>
                                         </div>
                                     </li>
                                 ))}

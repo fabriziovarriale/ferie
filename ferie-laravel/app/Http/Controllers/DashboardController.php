@@ -80,6 +80,9 @@ class DashboardController extends Controller
                 'leaveType' => $r->leaveType?->description ?? $r->leave_type_code,
                 'startDate' => $r->start_date->format('Y-m-d'),
                 'endDate' => $r->end_date->format('Y-m-d'),
+                'requestedUnits' => (int) $r->requested_units,
+                'createdAt' => $r->created_at?->toIso8601String(),
+                'approvedAt' => $r->updated_at?->toIso8601String(),
             ])
             ->values()
             ->all();
